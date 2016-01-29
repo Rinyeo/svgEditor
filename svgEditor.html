@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<title>SVG-Editor</title>
+	<style>
+
+		html,body{
+			padding: 0;
+			margin: 0;
+			font-family: 微软雅黑;
+		}
+
+		.contains {
+			width:100%;
+			min-width: 1200px;
+			margin: 0 auto;
+		}
+		input {
+			padding-bottom:0;
+			margin-bottom:0;
+		}
+		.sidebar {
+			position: absolute;
+			width: 300px;
+			top: 0;
+			left: 0;
+			bottom: 0;
+			min-height: 850px;
+			background: #f9f9f9;
+			box-shadow: 2px 2px 10px rgba(0,0,0,.3);
+		}
+		.main {
+			position: absolute;
+			top: 0;
+			left:300px;
+			bottom: 0;
+			right: 0;
+			min-height:820px;
+			margin: 15px;
+			box-shadow: 2px 2px 10px rgba(0,0,0,.4);
+		}
+		#svgAera {
+			width: 100%;
+			height: 100%;
+			overflow: hidden;
+		}
+		label {
+			font-size:15px;
+			display:inline-block;
+			text-align: center;
+		}
+		#attrs-form label {
+			width: 120px;
+		}
+		#pub-attrs-form label {
+			width: 120px;
+		}
+		.filler label {
+			width: 60px !important;
+		}
+		.color {
+			width: 30px;
+			height: 32px;
+			padding: 0;
+			margin: 0 24px 0 0;
+
+		}
+		h2 {
+			padding:6px 10px;
+			font-size: 18px;
+			background:#eee;
+		}
+		#btn-form,
+		#del-btn,
+		#attrs-form,
+		#pub-attrs-form,
+		#reset-btn {
+			margin-left: 10px;
+		}
+		button {
+			display:inline-block;
+			width:50px;
+			height:24px;
+			line-height:24px;
+			background: #ddd;
+			border: 1px solid #aaa;
+			cursor:pointer;
+			transition: all 0.5s;
+			-wibkit-transition: all 0.5s;
+			-moz-transition: all 0.5s;
+			border-radius: 3px;
+			-moz-border-radius: 3px;
+		}
+		button:hover {
+			border: 1px solid #444;
+			background:#444;
+			color: white;
+		}
+	</style>
+</head>
+<body>
+	<div class="contains">
+
+		<!-- 侧边栏 -->
+		<div class="sidebar">
+			<h2 style="margin-top:0;">创建</h2>
+			<div id="btn-form">
+				<button data-create="rect">矩形</button>
+				<button data-create="circle">圆形</button>
+				<button data-create="ellipse">椭圆</button>
+				<button data-create="line">直线</button>
+			</div>
+
+			<h2>删除</h2>
+			<div>
+				<button id="del-btn">删除</button>
+			</div>
+
+			<h2>形状</h2>
+			<form id="attrs-form">
+				请创建图形或选择图形！
+			</form>
+
+			<h2>外观和变换</h2>
+			<form id="pub-attrs-form">
+				<div class="filler">
+
+					<!-- 填充 -->
+					<p>
+						<label>填充</label>
+						<input class="color" id="fill" type="color" value="#ffffff" >
+					</p>
+
+					<!-- 填充 -->
+					<p>
+						<label>描边</label>
+						<input class="color" id="stroke" type="color" value="#ff0000">
+						<input id="strokeWidth" type="range" value="1">
+					</p>
+				</div>
+
+
+				<!-- transformX -->
+				<p>
+					<label>translateX</label>
+					<input id="translateX" type="range" min="-600" max="600" value="0">
+				</p>
+
+				<!-- transformY -->
+				<p>
+					<label>translateY</label>
+					<input id="translateY" type="range" min="-600" max="600" value="0">
+				</p>
+
+				<!-- scale -->
+				<p>
+					<label>scale</label>
+					<input id="scale" type="range" min="-1" max="2" step="0.01" value="1">
+				</p>
+
+				<!-- rotate -->
+				<p>
+					<label>rotate</label>
+					<input id="rotate" type="range"  min="-180" max="180" value="0">
+				</p>
+			</form>
+
+			<h2>重置属性</h2>
+			<div id="reset-btn">
+				<button>重置</button>
+			</div>
+		</div>
+
+		<!-- 主区域 -->
+		<div class="main">
+			<div id="svgAera"></div>
+		</div>
+	</div>
+	<script>
+		var SVG_NS = 'http://www.w3.org/2000/svg';
+
+		// 图形及对应默认属性
+		var shapeInfo = {
+			rect: 'x:300,y:400,width:200,height:100,rx:0,ry:0',
+			circle: 'cx:300,cy:320,r:50',
+			ellipse: 'cx:500,cy:300,rx:80,ry:30',
+			line: 'x1:200,y1:200,x2:400,y2:200'
+		};
+
+		//默认公共属性
+		var defaultAttrs = {
+			fill: '#80ffff',
+			stroke: '#bbbbbb'
+		};
+
+		//  选取三个表单区域
+		var createForm = document.getElementById('btn-form');
+		var attrForm = document.getElementById('attrs-form');
+		var pubAttrForm = document.getElementById('pub-attrs-form');
+
+		// 获取删除按钮
+		var delBtn = document.getElementById('del-btn');
+
+		// 获取重置按钮
+		var resetBtn = document.getElementById('reset-btn');
+
+
+
+		// 选取公共属性控件
+		var fill = document.getElementById('fill');
+		var stroke = document.getElementById('stroke');
+		var strokeWidth = document.getElementById('strokeWidth');
+		var translateX = document.getElementById('translateX');
+		var translateY = document.getElementById('translateY');
+		var scale = document.getElementById('scale');
+		var rotate = document.getElementById('rotate');
+
+		// 获取画布区域
+		var SvgAera = document.getElementById('svgAera');
+
+		// 创建SVG画布，同时把画布SVG节点添加到画布区域中
+		var svg = creatSVG();
+
+		// 一开始没有选中对象
+		var selected = null;
+
+		// 创建SVG节点方法，不是创建形状的节点方法
+		function creatSVG () {
+			var _svg = document.createElementNS(SVG_NS, 'svg');
+			_svg.setAttribute('width', '100%');
+			_svg.setAttribute('height', '100%');
+			SvgAera.appendChild(_svg);
+			return _svg;
+		};
+
+		// 创建按钮监听事件
+		createForm.addEventListener('click', function(e) {
+	        if (e.target.tagName.toLowerCase() == 'button') {
+	            var shapeName = e.target.getAttribute('data-create');
+	            var shape = document.createElementNS(SVG_NS, shapeName);
+				svg.appendChild(shape);
+		        select(shape);
+	        }
+	        return false;
+	    });
+
+		//为attr-form面板监听事件
+		attrForm.addEventListener('input', function(e) {
+	        if (e.target.tagName.toLowerCase() != 'input') return;
+		        var attrBoard = e.target;
+		        selected.setAttribute(attrBoard.name, attrBoard.value);
+  	  });
+		// 为删除按钮设置监听事件
+	    delBtn.addEventListener('click', function(e) {
+	    	if (e.target.tagName.toLowerCase() == 'button' && selected) {
+	    		svg.removeChild(selected);
+	    		selected = null;
+	    		attrForm.innerHTML = '请创建图形或选择图形！';
+	    	}
+	    });
+
+	    // 为重置按钮设置监听事件
+	    resetBtn.addEventListener('click', function (e) {
+	    	if (e.target.tagName.toLowerCase() == 'button' && selected) {
+		        selected.setAttribute('fill', '#80ffff');
+		        selected.setAttribute('stroke', '#bbbbbb');
+		        selected.setAttribute('stroke-width', 1);
+		        selected.setAttribute('transform', encodeTranform({
+		            tx: 0,
+		            ty: 0,
+		            scale: 1,
+		            rotate: 0
+	       		}));
+	    	}
+	    });
+		// 为pub-attr-form面板监听事件
+		pubAttrForm.addEventListener('input', function(e) {
+	        if (e.target.tagName.toLowerCase() != 'input') return;
+	        if (!selected) return;
+
+	        selected.setAttribute('fill', fill.value);
+	        selected.setAttribute('stroke', stroke.value);
+	        selected.setAttribute('stroke-width', strokeWidth.value);
+	        selected.setAttribute('transform', encodeTranform({
+	            tx: translateX.value,
+	            ty: translateY.value,
+	            scale: scale.value,
+	            rotate: rotate.value
+       		}));
+  		});
+
+		// encodeTranform方法
+		function encodeTranform(transObject) {
+            var str = 'translate(' + transObject.tx + ',' + transObject.ty + ') ' +
+                   'rotate(' + transObject.rotate + ') ' +
+                   'scale(' + transObject.scale + ')';
+            return str;
+        }
+
+		// 监听画板事件
+		svg.addEventListener('click', function(e) {
+        if (e.target.tagName.toLowerCase() in shapeInfo) {
+            select(e.target);
+        }
+    });
+		function select(shape) {
+			var attrs = shapeInfo[shape.tagName].split(',');
+			var attr = [],
+				name = '',
+				value = '';
+			attrForm.innerHTML = '';
+
+			while(attrs.length) {
+				attr = attrs.shift().split(':');
+				name = attr[0];
+				value = shape.getAttribute(name) || attr[1];
+				shape.setAttribute(name, value);
+
+				// 为每个属性创建面板
+				createBoard(shape, name, value);
+			}
+
+			// 初始化填充颜色 与 表变颜色
+			for (name in defaultAttrs) {
+	            value = shape.getAttribute(name) || defaultAttrs[name];
+	            shape.setAttribute(name, value);
+	        }
+
+	        // 选中当前目标
+	        selected = shape;
+	        updatePubBoard();
+		}
+
+		// 创建属性面板方法
+		function createBoard(shape, name, value) {
+			var label = document.createElement('label');
+			label.textContent = name;
+
+			var range = document.createElement('input');
+			range.setAttribute('name', name);
+			range.setAttribute('value', value);
+			range.setAttribute('type', 'range');
+			range.setAttribute('min', '0');
+			range.setAttribute('max', '1000');
+
+			attrForm.appendChild(label);
+			attrForm.appendChild(range);
+		}
+
+		function updatePubBoard() {
+	        fill.value = selected.getAttribute('fill');
+	        stroke.value = selected.getAttribute('stroke');
+	        var t = decodeTransform(selected.getAttribute('transform'));
+	        translateX.value = t ? t.tx : 0;
+	        translateY.value = t ? t.ty : 0;
+	        rotate.value = t ? t.rotate : 0;
+	        scale.value = t ? t.scale : 1;
+
+	        // 通过正则表达式，获取transform属性字符串，进行分割，如果匹配到结果，返回对象
+	        function decodeTransform(transString) {
+	            var match = /translate\((\d+),(\d+)\)\srotate\((\d+)\)\sscale\((\d+)\)/.exec(transString);
+	            return match ? {
+	                tx: +match[1],
+	                ty: +match[2],
+	                rotate: +match[3],
+	                scale: +match[4]
+	            } : null;
+	        }
+
+
+    }
+
+
+	</script>
+</body>
+</html>
