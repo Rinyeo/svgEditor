@@ -129,17 +129,16 @@
 					<!-- 填充 -->
 					<p>
 						<label>填充</label>
-						<input class="color" id="fill" type="color" value="#ffffff" >
+						<input class="color" id="fill" type="color" value="#80ffff" >
 					</p>
 
 					<!-- 填充 -->
 					<p>
 						<label>描边</label>
-						<input class="color" id="stroke" type="color" value="#ff0000">
+						<input class="color" id="stroke" type="color" value="#bbbbbb">
 						<input id="strokeWidth" type="range" value="1">
 					</p>
 				</div>
-
 
 				<!-- transformX -->
 				<p>
@@ -191,7 +190,8 @@
 		//默认公共属性
 		var defaultAttrs = {
 			fill: '#80ffff',
-			stroke: '#bbbbbb'
+			stroke: '#bbbbbb',
+			'stroke-width': 1
 		};
 
 		//  选取三个表单区域
@@ -250,7 +250,8 @@
 	        if (e.target.tagName.toLowerCase() != 'input') return;
 		        var attrBoard = e.target;
 		        selected.setAttribute(attrBoard.name, attrBoard.value);
-  	  });
+  		});
+
 		// 为删除按钮设置监听事件
 	    delBtn.addEventListener('click', function(e) {
 	    	if (e.target.tagName.toLowerCase() == 'button' && selected) {
@@ -272,6 +273,13 @@
 		            scale: 1,
 		            rotate: 0
 	       		}));
+	       		fill.value  = '#80ffff';
+	       		stroke.value = '#bbbbbb';
+	       		strokeWidth.value = '1';
+	       		translateX.value = '0';
+	       		translateY.value = '0';
+	       		scale.value = '1';
+	       		rotate.value = '0';
 	    	}
 	    });
 		// 为pub-attr-form面板监听事件
@@ -300,10 +308,11 @@
 
 		// 监听画板事件
 		svg.addEventListener('click', function(e) {
-        if (e.target.tagName.toLowerCase() in shapeInfo) {
-            select(e.target);
-        }
-    });
+	        if (e.target.tagName.toLowerCase() in shapeInfo) {
+	            select(e.target);
+	        }
+    	});
+
 		function select(shape) {
 			var attrs = shapeInfo[shape.tagName].split(',');
 			var attr = [],
@@ -351,15 +360,15 @@
 		function updatePubBoard() {
 	        fill.value = selected.getAttribute('fill');
 	        stroke.value = selected.getAttribute('stroke');
+	        strokeWidth.value = selected.getAttribute('stroke-width');
 	        var t = decodeTransform(selected.getAttribute('transform'));
 	        translateX.value = t ? t.tx : 0;
 	        translateY.value = t ? t.ty : 0;
 	        rotate.value = t ? t.rotate : 0;
 	        scale.value = t ? t.scale : 1;
-
 	        // 通过正则表达式，获取transform属性字符串，进行分割，如果匹配到结果，返回对象
 	        function decodeTransform(transString) {
-	            var match = /translate\((\d+),(\d+)\)\srotate\((\d+)\)\sscale\((\d+)\)/.exec(transString);
+	            var match = /translate\((\d+),(\d+)\)\srotate\((\d+)\)\sscale\((\d+|\d?\.\d)\)/.exec(transString);
 	            return match ? {
 	                tx: +match[1],
 	                ty: +match[2],
@@ -368,8 +377,7 @@
 	            } : null;
 	        }
 
-
-    }
+    	}
 
 
 	</script>
